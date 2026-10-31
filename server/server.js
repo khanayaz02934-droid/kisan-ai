@@ -58,6 +58,15 @@ const globalLimiter = rateLimit({
 });
 app.use(globalLimiter);
 
+// Root route
+app.get('/', (req, res) => {
+  res.json({
+    success: true,
+    message: 'Kisan AI API is running successfully',
+    data: { status: 'online' },
+  });
+});
+
 // Health check
 app.get('/api/health', (req, res) => {
   res.json({
