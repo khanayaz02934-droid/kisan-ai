@@ -24,7 +24,11 @@ export default function Login() {
       const data = await authService.login(form);
       dispatch(setCredentials(data));
       toast.success(t('auth.loginOk'));
-      navigate('/');
+      // Role-based redirect straight from the backend's role field
+      // ('ADMIN'; normalised so 'admin'/'Admin' variants still work):
+      // ADMIN → Admin Dashboard, USER → the farmer home/dashboard.
+      const isAdmin = String(data?.user?.userType || '').toUpperCase() === 'ADMIN';
+      navigate(isAdmin ? '/admin/dashboard' : '/');
     } catch (err) {
       toast.error(apiErrorMessage(err));
     } finally {

@@ -16,6 +16,7 @@ import Cart from './pages/Cart';
 import Orders from './pages/Orders';
 import Profile from './pages/Profile';
 import Placeholder from './pages/Placeholder';
+import { useSelector } from 'react-redux';
 import AdminDashboard from './pages/admin/Dashboard';
 import AdminUsers from './pages/admin/Users';
 import AdminOrders from './pages/admin/Orders';
@@ -23,6 +24,21 @@ import AdminScans from './pages/admin/Scans';
 import AdminProducts from './pages/admin/Products';
 import AdminGrains from './pages/admin/Grains';
 import AdminMandi from './pages/admin/Mandi';
+import AdminSettings from './pages/admin/Settings';
+
+/**
+ * Compatibility redirect for the legacy "/auth/admin" style URLs that get
+ * typed or bookmarked by hand. There is no page at /auth/* — admins belong
+ * at /admin (the dashboard) and everyone else at the login page, so these
+ * links must never land on the 404 placeholder.
+ */
+function LegacyAuthRedirect() {
+  const user = useSelector((s) => s.auth.user);
+  // Role is backend-defined ('ADMIN') but normalised so any case variant
+  // ('admin', 'Admin') stored in older documents still routes correctly.
+  const isAdmin = String(user?.userType || '').toUpperCase() === 'ADMIN';
+  return <Navigate to={isAdmin ? '/admin' : '/login'} replace />;
+}
 
 export default function App() {
   return (
@@ -80,6 +96,9 @@ export default function App() {
           <Route path="*" element={<Placeholder title="404" />} />
         </Route>
 
+        {/* /auth/admin (and any /auth/x) → real admin dashboard or login */}
+        <Route path="/auth/*" element={<LegacyAuthRedirect />} />
+
         <Route
           path="/admin/*"
           element={
@@ -89,12 +108,17 @@ export default function App() {
           }
         >
           <Route index element={<AdminDashboard />} />
+          {/* /admin/dashboard is an explicit alias of the index dashboard,
+              so post-login navigation to that exact URL renders the page
+              without changing the address bar. */}
+          <Route path="dashboard" element={<AdminDashboard />} />
           <Route path="users" element={<AdminUsers />} />
           <Route path="orders" element={<AdminOrders />} />
           <Route path="scans" element={<AdminScans />} />
           <Route path="products" element={<AdminProducts />} />
           <Route path="grains" element={<AdminGrains />} />
           <Route path="mandi" element={<AdminMandi />} />
+          <Route path="settings" element={<AdminSettings />} />
           <Route path="*" element={<Navigate to="/admin" replace />} />
         </Route>
       </Routes>

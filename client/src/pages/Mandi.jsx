@@ -22,13 +22,19 @@ export default function Mandi() {
   const [state, setState] = useState('');
   const [district, setDistrict] = useState('');
   const [commodity, setCommodity] = useState('');
+  const [date, setDate] = useState('');
   const [page, setPage] = useState(1);
 
   // Apply filters only on submit so users control when expensive queries run.
   const [applied, setApplied] = useState({});
   const applyFilters = (e) => {
     e.preventDefault();
-    const next = { state: state.trim(), district: district.trim(), commodity: commodity.trim() };
+    const next = {
+      state: state.trim(),
+      district: district.trim(),
+      commodity: commodity.trim(),
+      date: date.trim(),
+    };
     // Strip empty values from the request
     Object.keys(next).forEach((k) => !next[k] && delete next[k]);
     setApplied(next);
@@ -40,7 +46,9 @@ export default function Mandi() {
   const { data, isLoading, isError, error, refetch, isFetching } = useQuery({
     queryKey: ['mandi', params],
     queryFn: () => mandiService.list(params),
-    keepPreviousData: true,
+    // v5 API (keepPreviousData was removed): keep the previous result visible
+    // while newer filter results load, so the table doesn't flash empty.
+    placeholderData: (prev) => prev,
   });
 
   const prices = data?.prices || [];
@@ -134,6 +142,13 @@ export default function Mandi() {
             value={commodity}
             onChange={(e) => setCommodity(e.target.value)}
           />
+          <Input
+            label={t('mandi.date')}
+            type="date"
+            className="min-w-0"
+            value={date}
+            onChange={(e) => setDate(e.target.value)}
+          />
           <div className="flex items-end gap-2">
             <Button type="submit" className="flex-1">
               {t('common.search')}
@@ -146,6 +161,7 @@ export default function Mandi() {
                 setState('');
                 setDistrict('');
                 setCommodity('');
+                setDate('');
                 setApplied({});
                 setPage(1);
               }}

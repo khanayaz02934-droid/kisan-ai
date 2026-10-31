@@ -39,6 +39,8 @@ const getCachedPrices = async (filters = {}) => {
       { 'commodity.hi': commodityPattern },
     ];
   }
+  // Exact arrival/publication date match (YYYY-MM-DD), when supplied.
+  if (filters.date) query.date = String(filters.date).trim();
 
   return MandiPrice.find(query).sort({ fetchedAt: -1 }).limit(50).lean();
 };
@@ -148,6 +150,7 @@ const getMandiPrices = async (filters = {}) => {
       { 'commodity.hi': commodityPattern },
     ];
   }
+  if (filters.date) cacheQuery.date = String(filters.date).trim();
 
   const lastFetch = await MandiPrice.findOne(cacheQuery).sort({ fetchedAt: -1 });
   const isCacheFresh =
@@ -169,7 +172,14 @@ const getMandiPrices = async (filters = {}) => {
   try {
     const records = await fetchFromAPI(filters);
     if (records.length > 0) {
-      const transformed = transformAPIRecords(records);
+      let transformed = transformAPIRecords(records);
+
+      // data.gov.in cannot filter by arrival date server-side, so when a date
+      // filter is supplied keep only records from that exact day.
+      if (filters.date) {
+        const wanted = String(filters.date).trim();
+        transformed = transformed.filter((r) => r.date === wanted);
+      }
 
       // Upsert records
       for (const record of transformed) {

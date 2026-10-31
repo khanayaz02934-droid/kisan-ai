@@ -15,7 +15,8 @@ import { grainService } from '../services';
 import { apiErrorMessage } from '../services/api';
 import { pickLang, formatINR } from '../utils/helpers';
 
-const GRAIN_TYPES = ['RICE', 'WHEAT', 'MAIZE', 'PULSES', 'MILLETS', 'OILSEEDS', 'SPICES', 'OTHER'];
+// Must match the `type` enum in server/models/grainModel.js exactly.
+const GRAIN_TYPES = ['RICE', 'WHEAT', 'MAIZE', 'PULSES', 'MILLETS', 'OILSEEDS', 'BARLEY', 'SORGHUM', 'OTHER'];
 
 export default function Grain() {
   const { t, i18n } = useTranslation();

@@ -106,6 +106,9 @@ const seedData = async () => {
       {
         name: 'Admin Kisan',
         email: 'admin@kisanai.com',
+        // insertMany below bypasses the pre-save hash hook, so the password
+        // MUST be pre-hashed here. (A raw string would be stored in plaintext
+        // and admin login would never work on a fresh database.)
         password: hashedPassword,
         userType: 'ADMIN',
         phone: '9000000000',
@@ -114,6 +117,7 @@ const seedData = async () => {
         preferredLang: 'en',
         isActive: true,
       },
+     
     ]);
 
     console.log(`${users.length} users created`.green);

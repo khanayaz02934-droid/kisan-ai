@@ -13,6 +13,9 @@ const userSchema = new mongoose.Schema(
     village: { type: String, default: '' },
     preferredLang: { type: String, enum: ['en', 'hi'], default: 'en' },
     isActive: { type: Boolean, default: true },
+    // Soft-delete support. When set, the account is anonymised but its
+    // referenced records (orders, carts, scans) stay intact.
+    deletedAt: { type: Date, default: null },
   },
   { timestamps: true }
 );

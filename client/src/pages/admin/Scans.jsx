@@ -75,6 +75,7 @@ export default function AdminScans() {
         <option value="">All statuses</option>
         <option value="COMPLETED">COMPLETED</option>
         <option value="NEEDS_REVIEW">NEEDS_REVIEW</option>
+        <option value="FAILED">FAILED</option>
       </Select>
 
       {(data?.scans || []).length === 0 ? (

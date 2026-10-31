@@ -132,4 +132,61 @@ const deleteProduct = asyncHandler(async (req, res) => {
   apiResponse(res, 200, true, 'Product deleted', null);
 });
 
-export { getProducts, getProduct, createProduct, updateProduct, deleteProduct };
+// @desc    Get all products incl. unavailable (Admin)
+// @route   GET /api/admin/products
+// @access  Admin
+const getAdminProducts = asyncHandler(async (req, res) => {
+  const { search, category, availability, page = 1, limit = 20 } = req.query;
+  const pageNum = Math.max(1, parseInt(page));
+  const limitNum = Math.min(100, Math.max(1, parseInt(limit)));
+
+  const query = {};
+  if (category) {
+    const categoryUpper = category.toUpperCase();
+    if (!['PESTICIDE', 'FUNGICIDE', 'FERTILIZER', 'SEED', 'BIO_PRODUCT'].includes(categoryUpper)) {
+      res.status(400);
+      throw new Error('Invalid category filter');
+    }
+    query.category = categoryUpper;
+  }
+
+  const conditions = [];
+
+  if (availability === 'AVAILABLE') {
+    query.isActive = true;
+    query.stock = { $gt: 0 };
+  } else if (availability === 'UNAVAILABLE') {
+    conditions.push({ $or: [{ isActive: false }, { stock: { $lte: 0 } }] });
+  }
+
+  if (search) {
+    const searchPattern = new RegExp(escapeRegExp(search), 'i');
+    conditions.push({
+      $or: [
+        { 'name.en': searchPattern },
+        { 'name.hi': searchPattern },
+        { tags: searchPattern },
+      ],
+    });
+  }
+
+  if (conditions.length === 1) {
+    query.$or = conditions[0].$or;
+  } else if (conditions.length > 1) {
+    query.$and = conditions;
+  }
+
+  const skip = (pageNum - 1) * limitNum;
+
+  const [products, total] = await Promise.all([
+    Product.find(query).sort({ createdAt: -1 }).skip(skip).limit(limitNum).lean(),
+    Product.countDocuments(query),
+  ]);
+
+  apiResponse(res, 200, true, 'Admin products fetched', {
+    products,
+    pagination: { page: pageNum, limit: limitNum, total, pages: Math.ceil(total / limitNum) },
+  });
+});
+
+export { getProducts, getProduct, getAdminProducts, createProduct, updateProduct, deleteProduct };

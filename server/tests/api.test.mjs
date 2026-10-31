@@ -21,6 +21,8 @@ const tinyPng = Buffer.from(
 const unique = randomBytes(4).toString('hex');
 let farmerToken;
 let adminToken;
+let adminSelfId;
+let probeUserId;
 
 const req = async (path, { method = 'GET', token, body, form } = {}) => {
   const headers = {};
@@ -495,6 +497,7 @@ test('Admin login + dashboard stats work', async () => {
   });
   assert.equal(login.status, 200);
   adminToken = login.json.data.token;
+  adminSelfId = login.json.data.user?._id;
 
   const { status, json } = await req('/admin/stats', { token: adminToken });
   assert.equal(status, 200);
@@ -531,6 +534,140 @@ test('Only admins can create/delete products', async () => {
 
   const gone = await req(`/products/${created.json.data._id}`, { token: adminToken });
   assert.equal(gone.status, 404);
+});
+
+// ---------- Rich admin dashboard & management APIs ----------
+test('GET /admin/dashboard returns live stats, charts, and recent records', async () => {
+  const { status, json } = await req('/admin/dashboard', { token: adminToken });
+  assert.equal(status, 200);
+
+  const d = json.data;
+  for (const key of [
+    'totalUsers',
+    'totalAdmins',
+    'activeUsers',
+    'totalProducts',
+    'availableProducts',
+    'totalOrders',
+    'pendingOrders',
+    'totalRevenue',
+  ]) {
+    assert.equal(typeof d.stats[key], 'number', `${key} must be a number`);
+  }
+
+  // 14-day dense chart arrays
+  assert.equal(d.charts.registrations.length, 14);
+  assert.equal(d.charts.orders.length, 14);
+  assert.ok(Array.isArray(d.recentUsers));
+  assert.ok(Array.isArray(d.recentOrders));
+  assert.ok(Array.isArray(d.recentProducts));
+  assert.ok(d.recentUsers.length >= 1); // at least the admin account
+});
+
+test('GET /admin/dashboard rejects non-admin and anonymous users', async () => {
+  const forbidden = await req('/admin/dashboard', { token: farmerToken });
+  assert.equal(forbidden.status, 403);
+  assert.equal((await req('/admin/dashboard')).status, 401);
+});
+
+test('GET /admin/products (admin list incl. unavailable) is admin-only and works', async () => {
+  const forbidden = await req('/admin/products', { token: farmerToken });
+  assert.equal(forbidden.status, 403);
+
+  const ok = await req('/admin/products', { token: adminToken });
+  assert.equal(ok.status, 200);
+  assert.ok(Array.isArray(ok.json.data.products));
+  assert.ok(ok.json.data.products.length >= 10);
+});
+
+test('GET /admin/users supports role filter and search', async () => {
+  let res = await req('/admin/users?role=ADMIN', { token: adminToken });
+  assert.equal(res.status, 200);
+  assert.ok(res.json.data.users.length >= 1);
+  for (const u of res.json.data.users) {
+    assert.equal(u.userType, 'ADMIN');
+  }
+
+  // Probe user used by the user-detail and delete tests below.
+  const probeEmail = `probe-${unique}@kisanai.com`;
+  const reg = await req('/auth/register', {
+    method: 'POST',
+    body: { name: 'Probe User', email: probeEmail, password: 'secret123' },
+  });
+  assert.equal(reg.status, 201);
+  probeUserId = reg.json.data.user._id;
+
+  res = await req(`/admin/users?search=${probeEmail}`, { token: adminToken });
+  assert.equal(res.status, 200);
+  assert.equal(res.json.data.pagination.total, 1);
+  assert.equal(res.json.data.users[0]._id, probeUserId);
+});
+
+test('GET /admin/users/:id returns profile with order stats; bad ids handled honestly', async () => {
+  let res = await req('/admin/users/not-a-valid-id', { token: adminToken });
+  assert.equal(res.status, 400);
+
+  res = await req(`/admin/users/${'6'.repeat(24)}`, { token: adminToken });
+  assert.equal(res.status, 404);
+
+  res = await req(`/admin/users/${probeUserId}`, { token: adminToken });
+  assert.equal(res.status, 200);
+  assert.equal(res.json.data.user._id, probeUserId);
+  assert.equal(typeof res.json.data.orderStats.count, 'number');
+  assert.equal(typeof res.json.data.orderStats.totalSpent, 'number');
+});
+
+test('DELETE /admin/users/:id — admin cannot delete their own account', async () => {
+  const { status, json } = await req(`/admin/users/${adminSelfId}`, {
+    method: 'DELETE',
+    token: adminToken,
+  });
+  assert.equal(status, 400);
+  assert.match(json.message, /own account/i);
+});
+
+test('POST /admin/uploads/image requires a file', async () => {
+  const res = await fetch(`${BASE}/admin/uploads/image`, {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${adminToken}` },
+    body: new FormData(),
+  });
+  assert.equal(res.status, 400);
+});
+
+test('POST /admin/uploads/image returns an honest config error without Cloudinary credentials', async () => {
+  const form = new FormData();
+  form.append('image', new Blob([tinyPng], { type: 'image/png' }), 'pixel.png');
+  const res = await fetch(`${BASE}/admin/uploads/image`, {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${adminToken}` },
+    body: form,
+  });
+  // Tests blank the Cloudinary keys, so the server must say so at 503 —
+  // never silently "succeed".
+  assert.equal(res.status, 503);
+  const json = await res.json();
+  assert.match(json.message, /Cloudinary/i);
+});
+
+test('DELETE /admin/users/:id soft-deletes a user and hides them from the admin list', async () => {
+  let list = await req(`/admin/users?search=${`probe-${unique}`}`, { token: adminToken });
+  assert.equal(list.json.data.pagination.total, 1);
+
+  const del = await req(`/admin/users/${probeUserId}`, { method: 'DELETE', token: adminToken });
+  assert.equal(del.status, 200);
+
+  // Refresh: the user no longer appears in the list...
+  list = await req(`/admin/users?search=${`probe-${unique}`}`, { token: adminToken });
+  assert.equal(list.json.data.pagination.total, 0);
+
+  // ...their detail view is gone...
+  const detail = await req(`/admin/users/${probeUserId}`, { token: adminToken });
+  assert.equal(detail.status, 404);
+
+  // ...and deleting twice is an honest 404, not 500.
+  const again = await req(`/admin/users/${probeUserId}`, { method: 'DELETE', token: adminToken });
+  assert.equal(again.status, 404);
 });
 
 // ---------- Error hygiene ----------

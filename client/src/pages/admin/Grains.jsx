@@ -9,11 +9,12 @@ import ErrorState from '../../components/ui/ErrorState';
 import EmptyState from '../../components/ui/EmptyState';
 import Pagination from '../../components/ui/Pagination';
 import Table from '../../components/ui/Table';
-import { grainService } from '../../services';
+import { adminService } from '../../services';
 import { apiErrorMessage } from '../../services/api';
 import { formatINR } from '../../utils/helpers';
 
-const TYPES = ['RICE', 'WHEAT', 'MAIZE', 'PULSES', 'MILLETS', 'OILSEEDS', 'SPICES', 'OTHER'];
+// Must match the `type` enum in server/models/grainModel.js exactly.
+const TYPES = ['RICE', 'WHEAT', 'MAIZE', 'PULSES', 'MILLETS', 'OILSEEDS', 'BARLEY', 'SORGHUM', 'OTHER'];
 
 const emptyForm = {
   name: { en: '', hi: '' },
@@ -40,10 +41,12 @@ export default function AdminGrains() {
   const [deleting, setDeleting] = useState(null);
 
   const params = { page, limit: 20 };
-
+  // NOTE: the admin-only /grain/admin/all endpoint is used (NOT the public
+  // /grain list) so sold-out (availableQuintal=0) and deactivated grains stay
+  // visible here — otherwise they could never be restocked or re-activated.
   const { data, isLoading, isError, error, refetch } = useQuery({
     queryKey: ['admin', 'grains', params],
-    queryFn: () => grainService.list(params),
+    queryFn: () => adminService.allGrains(params),
   });
 
   if (isError) {

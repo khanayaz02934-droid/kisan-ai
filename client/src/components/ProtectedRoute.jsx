@@ -39,6 +39,7 @@ export function ProtectedRoute({ children, adminOnly = false }) {
       </div>
     );
   }
-  if (adminOnly && user?.userType !== 'ADMIN') return <Navigate to="/" replace />;
+  if (adminOnly && String(user?.userType || '').toUpperCase() !== 'ADMIN')
+    return <Navigate to="/" replace />;
   return children;
 }

@@ -1,5 +1,7 @@
 const adminOnly = (req, res, next) => {
-  if (req.user && req.user.userType === 'ADMIN') {
+  // Normalised so a legacy lowercase 'admin' in an old document cannot
+  // silently lock an admin out of the admin API.
+  if (req.user && String(req.user.userType || '').toUpperCase() === 'ADMIN') {
     next();
   } else {
     res.status(403);

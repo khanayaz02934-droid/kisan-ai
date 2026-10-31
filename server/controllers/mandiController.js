@@ -7,10 +7,10 @@ import apiResponse from '../utils/apiResponse.js';
 // @route   GET /api/mandi
 // @access  Public
 const getMandiList = asyncHandler(async (req, res) => {
-  const { state, district, commodity, page = 1, limit = 30 } = req.query;
+  const { state, district, commodity, date, page = 1, limit = 30 } = req.query;
 
   const { data, source, message, isLive, lastUpdated, latestDate } =
-    await getMandiPrices({ state, district, commodity });
+    await getMandiPrices({ state, district, commodity, date });
 
   // Apply pagination
   const pageNum = Math.max(1, parseInt(page));

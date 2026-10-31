@@ -30,6 +30,7 @@ const unit = spawnSync(
     '--test',
     'server/tests/geminiService.test.mjs',
     'server/tests/geminiChatService.test.mjs',
+    'server/tests/adminUserGuards.test.mjs',
   ],
   { cwd: process.cwd(), stdio: 'inherit', env: childEnv }
 );

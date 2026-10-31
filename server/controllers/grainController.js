@@ -1,6 +1,7 @@
 import asyncHandler from 'express-async-handler';
 import Grain from '../models/grainModel.js';
 import apiResponse from '../utils/apiResponse.js';
+import { escapeRegExp } from '../utils/escapeRegExp.js';
 
 // @desc    Get all grains (public, with filters)
 // @route   GET /api/grain
@@ -35,6 +36,46 @@ const getGrains = asyncHandler(async (req, res) => {
   ]);
 
   apiResponse(res, 200, true, 'Grain listings fetched', {
+    grains,
+    pagination: { page: pageNum, limit: limitNum, total, pages: Math.ceil(total / limitNum) },
+  });
+});
+
+// @desc    Get ALL grain listings, including sold-out / inactive (Admin).
+//          The public list hides grains with availableQuintal=0 or isActive=false,
+//          which would make a sold-out grain impossible to restock from the UI.
+// @route   GET /api/grain/admin/all
+// @access  Admin
+const getAllGrainsAdmin = asyncHandler(async (req, res) => {
+  const { type, state, search, page = 1, limit = 20 } = req.query;
+
+  const query = {};
+  if (type) query.type = type.toUpperCase();
+  if (state) query.state = new RegExp(escapeRegExp(state), 'i');
+  if (search) {
+    const searchPattern = new RegExp(escapeRegExp(search), 'i');
+    query.$or = [
+      { 'name.en': searchPattern },
+      { 'name.hi': searchPattern },
+      { variety: searchPattern },
+    ];
+  }
+
+  const pageNum = Math.max(1, parseInt(page));
+  const limitNum = Math.min(100, Math.max(1, parseInt(limit)));
+  const skip = (pageNum - 1) * limitNum;
+
+  const [grains, total] = await Promise.all([
+    Grain.find(query)
+      .populate('seller', 'name email')
+      .sort({ createdAt: -1 })
+      .skip(skip)
+      .limit(limitNum)
+      .lean(),
+    Grain.countDocuments(query),
+  ]);
+
+  apiResponse(res, 200, true, 'All grain listings fetched', {
     grains,
     pagination: { page: pageNum, limit: limitNum, total, pages: Math.ceil(total / limitNum) },
   });
@@ -129,4 +170,4 @@ const deleteGrain = asyncHandler(async (req, res) => {
   apiResponse(res, 200, true, 'Grain listing deleted', null);
 });
 
-export { getGrains, getGrain, createGrain, updateGrain, deleteGrain };
+export { getGrains, getAllGrainsAdmin, getGrain, createGrain, updateGrain, deleteGrain };
