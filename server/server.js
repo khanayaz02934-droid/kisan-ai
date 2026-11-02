@@ -1,6 +1,7 @@
+
 import './config/loadEnv.js';
-// Validate required env vars and fail fast with a clear message.
 import './config/validateEnv.js';
+
 import express from 'express';
 import helmet from 'helmet';
 import cors from 'cors';
@@ -22,31 +23,76 @@ import grainOrderRoutes from './routes/grainOrderRoutes.js';
 import adminRoutes from './routes/adminRoutes.js';
 import aiRoutes from './routes/aiRoutes.js';
 
-// Connect to MongoDB
-connectDB();
-
+// Initialize Express
 const app = express();
 
-// Security middleware
-app.use(helmet({
-  crossOriginResourcePolicy: { policy: 'cross-origin' },
-}));
+// Connect MongoDB
+connectDB();
 
-// CORS
-app.use(cors({
-  origin: process.env.CLIENT_URL || 'http://localhost:5173',
-  credentials: true,
-  methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization'],
-}));
+// Trust Render proxy
+app.set('trust proxy', 1);
 
-// Body parsing
+// Security Middleware
+app.use(
+  helmet({
+    crossOriginResourcePolicy: {
+      policy: 'cross-origin',
+    },
+  })
+);
+
+// CORS Configuration
+const allowedOrigins = [
+  'https://kisan-ai-seven.vercel.app',
+  'http://localhost:5173',
+  process.env.CLIENT_URL,
+]
+  .filter(Boolean)
+  .map((origin) => origin.trim().replace(/\/+$/, ''));
+
+console.log('Allowed CORS Origins:', allowedOrigins);
+
+app.use(
+  cors({
+    origin: (origin, callback) => {
+      // Allow requests without an Origin header
+      if (!origin) {
+        return callback(null, true);
+      }
+
+      const normalizedOrigin = origin.replace(/\/+$/, '');
+
+      if (allowedOrigins.includes(normalizedOrigin)) {
+        return callback(null, true);
+      }
+
+      console.error('CORS blocked origin:', origin);
+
+      return callback(new Error('Not allowed by CORS'));
+    },
+    credentials: true,
+    methods: [
+      'GET',
+      'POST',
+      'PUT',
+      'PATCH',
+      'DELETE',
+      'OPTIONS',
+    ],
+    allowedHeaders: [
+      'Content-Type',
+      'Authorization',
+    ],
+  })
+);
+
+// Body Parsing
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
-// Global rate limiter
+// Global Rate Limiter
 const globalLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000, // 15 minutes
+  windowMs: 15 * 60 * 1000,
   max: 300,
   standardHeaders: true,
   legacyHeaders: false,
@@ -56,23 +102,30 @@ const globalLimiter = rateLimit({
     data: null,
   },
 });
+
 app.use(globalLimiter);
 
-// Root route
+// Root Route
 app.get('/', (req, res) => {
-  res.json({
+  res.status(200).json({
     success: true,
     message: 'Kisan AI API is running successfully',
-    data: { status: 'online' },
+    data: {
+      status: 'online',
+    },
   });
 });
 
-// Health check
+// Health Check
 app.get('/api/health', (req, res) => {
-  res.json({
+  res.status(200).json({
     success: true,
-    message: 'Kisan AI Server is running 🌱',
-    data: { timestamp: new Date().toISOString(), env: process.env.NODE_ENV },
+    message: 'Kisan AI Server is running',
+    data: {
+      status: 'online',
+      timestamp: new Date().toISOString(),
+      env: process.env.NODE_ENV,
+    },
   });
 });
 
@@ -88,20 +141,23 @@ app.use('/api/grain-orders', grainOrderRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/ai', aiRoutes);
 
-// Error handling
+// 404 Handler
 app.use(notFound);
+
+// Global Error Handler
 app.use(errorHandler);
 
+// Start Server
 const PORT = process.env.PORT || 5000;
 
 app.listen(PORT, () => {
   console.log('');
   console.log('='.repeat(60).green.bold);
-  console.log(`  🌱 KISAN AI SERVER STARTED`.green.bold);
+  console.log('  KISAN AI SERVER STARTED'.green.bold);
   console.log('='.repeat(60).green.bold);
   console.log(`  Port    : ${PORT}`.cyan);
   console.log(`  Mode    : ${process.env.NODE_ENV || 'development'}`.cyan);
-  console.log(`  URL     : http://localhost:${PORT}`.cyan);
+  console.log(`  CORS    : ${allowedOrigins.join(', ')}`.cyan);
   console.log('='.repeat(60).green.bold);
   console.log('');
 });
