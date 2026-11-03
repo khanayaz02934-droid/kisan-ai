@@ -5,6 +5,7 @@ import { useTranslation } from 'react-i18next';
 import toast from 'react-hot-toast';
 import Card from '../components/ui/Card';
 import Input from '../components/ui/Input';
+import PasswordInput from '../components/ui/PasswordInput';
 import Button from '../components/ui/Button';
 import { authService } from '../services';
 import { setCredentials } from '../redux/slices/authSlice';
@@ -43,7 +44,7 @@ export default function Login() {
         <p className="mt-1 text-sm text-muted">{t('auth.loginSub')}</p>
         <form onSubmit={submit} className="mt-5 space-y-4">
           <Input label={t('auth.email')} type="email" required value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} />
-          <Input label={t('auth.password')} type="password" required value={form.password} onChange={(e) => setForm({ ...form, password: e.target.value })} />
+          <PasswordInput label={t('auth.password')} required value={form.password} onChange={(e) => setForm({ ...form, password: e.target.value })} />
           <Button type="submit" disabled={busy} className="w-full">
             {busy ? t('common.loading') : t('auth.loginBtn')}
           </Button>

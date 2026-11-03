@@ -15,7 +15,17 @@ import GrainOrder from './server/models/grainOrderModel.js';
 const MONGO_URI =
   process.env.MONGO_URI || 'mongodb://localhost:27017/kisan-ai';
 
-const seedData = async () => {
+// Database name of the URI we are about to WIPE.
+const databaseName = (() => {
+  try {
+    const afterHost = MONGO_URI.split('/').pop() || '';
+    return (afterHost.split('?')[0] || 'default').trim() || 'default';
+  } catch {
+    return 'default';
+  }
+})();
+
+const seedDatabase = async () => {
   try {
     if (!MONGO_URI) {
       throw new Error('MONGO_URI is missing.');
@@ -801,4 +811,30 @@ const seedData = async () => {
   }
 };
 
-seedData();
+// CLI entry: run only when executed directly (`npm run seed` / `node seed.js`),
+// not when imported by the test suite or other tooling.
+const invokedDirectly = process.argv[1] && (
+  process.argv[1].endsWith('seed.js') || process.argv[1].endsWith('seed')
+);
+
+if (invokedDirectly) {
+  // SAFETY GUARD — seed.js DELETES all data in the target database.
+  //  - Remote (Atlas / non-localhost) databases require the --force flag:
+  //    a wipe of a hosted database must always be a deliberate decision.
+  //  - Production (NODE_ENV=production) requires --force as well.
+  //  - Always print which database will be wiped before doing anything.
+  const force = process.argv.includes('--force');
+  const isRemote = !/^(mongodb(?:\+srv)?:\/\/)(localhost|127\.0\.0\.1)([:/]|$)/.test(MONGO_URI);
+  console.log(`⚠️  This will DELETE and re-seed database "${databaseName}"`.yellow.bold);
+  if ((isRemote || process.env.NODE_ENV === 'production') && !force) {
+    console.error(
+      `\n[ABORTED] ${isRemote ? 'Remote database' : 'Production environment'} — wiping requires explicit confirmation.\n` +
+        'If you are ABSOLUTELY sure this database is disposable, run:\n' +
+        '  npm run seed -- --force\n'
+    );
+    process.exit(1);
+  }
+  seedDatabase();
+}
+
+export { seedDatabase, databaseName };

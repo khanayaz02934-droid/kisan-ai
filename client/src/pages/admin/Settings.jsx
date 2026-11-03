@@ -5,6 +5,7 @@ import Badge from '../../components/ui/Badge';
 import Button from '../../components/ui/Button';
 import Card from '../../components/ui/Card';
 import Input from '../../components/ui/Input';
+import PasswordInput from '../../components/ui/PasswordInput';
 import Spinner from '../../components/ui/Spinner';
 import { authService } from '../../services';
 import { apiErrorMessage } from '../../services/api';
@@ -119,23 +120,20 @@ export default function AdminSettings() {
       <Card>
         <h2 className="text-base font-bold text-ink">Change password</h2>
         <form onSubmit={changePassword} className="mt-3 max-w-md space-y-3">
-          <Input
+          <PasswordInput
             label="Current password"
-            type="password"
             required
             value={passwords.currentPassword}
             onChange={(e) => setPasswords({ ...passwords, currentPassword: e.target.value })}
           />
-          <Input
+          <PasswordInput
             label="New password"
-            type="password"
             required
             value={passwords.newPassword}
             onChange={(e) => setPasswords({ ...passwords, newPassword: e.target.value })}
           />
-          <Input
+          <PasswordInput
             label="Confirm new password"
-            type="password"
             required
             value={passwords.confirm}
             onChange={(e) => setPasswords({ ...passwords, confirm: e.target.value })}

@@ -5,6 +5,7 @@ import { useTranslation } from 'react-i18next';
 import toast from 'react-hot-toast';
 import Card from '../components/ui/Card';
 import Input from '../components/ui/Input';
+import PasswordInput from '../components/ui/PasswordInput';
 import Button from '../components/ui/Button';
 import { authService } from '../services';
 import { setCredentials } from '../redux/slices/authSlice';
@@ -14,13 +15,17 @@ export default function Register() {
   const { t } = useTranslation();
   const dispatch = useDispatch();
   const navigate = useNavigate();
-  const [form, setForm] = useState({ name: '', email: '', password: '', phone: '' });
+  const [form, setForm] = useState({ name: '', email: '', password: '', confirm: '', phone: '' });
   const [busy, setBusy] = useState(false);
 
   const submit = async (e) => {
     e.preventDefault();
     setBusy(true);
     try {
+      if (form.password !== form.confirm) {
+        toast.error(t('auth.passwordMismatch'));
+        return;
+      }
       const data = await authService.register(form);
       dispatch(setCredentials(data));
       toast.success(t('auth.registerOk'));
@@ -40,7 +45,8 @@ export default function Register() {
         <form onSubmit={submit} className="mt-5 space-y-4">
           <Input label={t('auth.name')} required value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} />
           <Input label={t('auth.email')} type="email" required value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} />
-          <Input label={t('auth.password')} type="password" required minLength={6} value={form.password} onChange={(e) => setForm({ ...form, password: e.target.value })} />
+          <PasswordInput label={t('auth.password')} required minLength={6} value={form.password} onChange={(e) => setForm({ ...form, password: e.target.value })} />
+          <PasswordInput label={t('auth.confirmPassword')} required minLength={6} value={form.confirm} onChange={(e) => setForm({ ...form, confirm: e.target.value })} />
           <Input label={t('auth.phone')} value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} />
           <Button type="submit" disabled={busy} className="w-full">
             {busy ? t('common.loading') : t('auth.registerBtn')}

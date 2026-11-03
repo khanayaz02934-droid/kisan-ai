@@ -6,6 +6,7 @@ import toast from 'react-hot-toast';
 import { User as UserIcon, Lock, LogOut } from 'lucide-react';
 import Card from '../components/ui/Card';
 import Input from '../components/ui/Input';
+import PasswordInput from '../components/ui/PasswordInput';
 import Select from '../components/ui/Select';
 import Button from '../components/ui/Button';
 import Badge from '../components/ui/Badge';
@@ -136,17 +137,15 @@ export default function Profile() {
           <Lock size={18} /> {t('profile.changePassword')}
         </h2>
         <form onSubmit={changePassword} className="mt-4 grid gap-3 sm:grid-cols-2">
-          <Input
+          <PasswordInput
             label={t('profile.currentPassword')}
-            type="password"
             required
             minLength={6}
             value={pwd.currentPassword}
             onChange={(e) => setPwd({ ...pwd, currentPassword: e.target.value })}
           />
-          <Input
+          <PasswordInput
             label={t('profile.newPassword')}
-            type="password"
             required
             minLength={6}
             value={pwd.newPassword}

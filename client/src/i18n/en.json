@@ -53,6 +53,8 @@
     "name": "Full name",
     "email": "Email",
     "password": "Password",
+    "confirmPassword": "Confirm password",
+    "passwordMismatch": "Passwords do not match. Please re-enter both fields.",
     "phone": "Phone",
     "state": "State",
     "district": "District",
