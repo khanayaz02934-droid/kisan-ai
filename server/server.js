@@ -41,21 +41,30 @@ app.use(
   })
 );
 
+// ---------------------------------------------------------------------------
 // CORS Configuration
+// ---------------------------------------------------------------------------
+// Origins that are allowed to call this API:
+//  - https://kisan-ai-seven.vercel.app  → production frontend (Vercel)
+//  - http://localhost:5173              → Vite dev server
+//  - process.env.CLIENT_URL             → set on Render (must be the exact
+//    Vercel production origin, no trailing slash)
 const allowedOrigins = [
   'https://kisan-ai-seven.vercel.app',
   'http://localhost:5173',
   process.env.CLIENT_URL,
 ]
-  .filter(Boolean)
-  .map((origin) => origin.trim().replace(/\/+$/, ''));
+  .filter(Boolean) // ignore unset CLIENT_URL instead of keeping '' entries
+  .map((origin) => origin.trim().replace(/\/+$/, '')) // normalize: no trailing slash
+  .filter((origin, i, list) => list.indexOf(origin) === i); // no duplicates
 
 console.log('Allowed CORS Origins:', allowedOrigins);
 
 app.use(
   cors({
     origin: (origin, callback) => {
-      // Allow requests without an Origin header
+      // Requests without an Origin header (curl, Render health checks,
+      // same-origin requests) are allowed.
       if (!origin) {
         return callback(null, true);
       }
@@ -68,8 +77,14 @@ app.use(
 
       console.error('CORS blocked origin:', origin);
 
-      return callback(new Error('Not allowed by CORS'));
+      // Reject disallowed origins with a proper 403 instead of a 500.
+      // The browser blocks the response anyway; this keeps logs accurate.
+      const err = new Error('CORS: Origin not allowed');
+      err.status = 403;
+      return callback(err);
     },
+    // The axios client sends withCredentials: true, so this MUST stay true.
+    // Pairing credentials: true with explicit origins (never '*') is required.
     credentials: true,
     methods: [
       'GET',
@@ -83,6 +98,11 @@ app.use(
       'Content-Type',
       'Authorization',
     ],
+    // The cors middleware answers OPTIONS preflights itself (default 204).
+    preflightContinue: false,
+    optionsSuccessStatus: 204,
+    // Cache preflight result for 10 minutes to cut down on OPTIONS requests.
+    maxAge: 600,
   })
 );
 

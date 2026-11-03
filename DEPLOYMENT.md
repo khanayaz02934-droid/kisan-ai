@@ -52,7 +52,7 @@ Add a SPA rewrite if refreshing deep links 404s:
 | `JWT_SECRET` | ✅ | random 32+ byte hex — do NOT reuse the dev one |
 | `JWT_EXPIRES_IN` | – | default `7d` |
 | `NODE_ENV` | ✅ | `production` |
-| `CLIENT_URL` | ✅ | your exact Vercel origin, e.g. `https://kisan-ai-seven.vercel.app` |
+| `CLIENT_URL` | ✅ | exact Vercel production origin: `https://kisan-ai-seven.vercel.app` (no trailing slash, no `-git-`/preview URLs) |
 | `PORT` | ✅ | Render usually injects it; do not hardcode |
 | `GEMINI_API_KEY` | ✅ (AI) | Google AI Studio key — backend only |
 | `GEMINI_MODEL` | – | default `gemini-3.5-flash` |
