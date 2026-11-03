@@ -48,8 +48,9 @@ for (const key of ['GEMINI_API_KEY', 'DATA_GOV_API_KEY', 'CLOUDINARY_URL', 'CLOU
 // 1) Unit tests (no server, no network): Gemini retry / fallback / failure logic.
 const unit = spawnSync(
   process.execPath,
-  [
+   [
     '--test',
+    'server/tests/routeAlignment.test.mjs',
     'server/tests/geminiService.test.mjs',
     'server/tests/geminiChatService.test.mjs',
     'server/tests/adminUserGuards.test.mjs',

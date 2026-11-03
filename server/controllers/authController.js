@@ -26,11 +26,13 @@ const register = asyncHandler(async (req, res) => {
     throw new Error('Password must be at least 6 characters');
   }
 
-  // const userExists = await User.findOne({ email });
-  // if (userExists) {
-  //   res.status(400);
-  //   throw new Error('User with this email already exists');
-  // }
+  // Explicit pre-check for a human-readable 400 before relying on the
+  // `unique` index (errorMiddleware maps a 11000 race to 400 as a fallback).
+  const userExists = await User.findOne({ email: String(email).trim().toLowerCase() });
+  if (userExists) {
+    res.status(400);
+    throw new Error('User with this email already exists');
+  }
 
   const user = await User.create({
     name,
